@@ -6,7 +6,6 @@
     <title>meow Analyzer</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-      /* Custom file input styles */
       .file-input-container {
         position: relative;
         display: inline-block;
@@ -19,7 +18,6 @@
         height: 100%;
         width: 100%;
       }
-      /* For reply column: applying ellipsis */
       .truncate-reply {
         max-width: 200px;
         white-space: nowrap;
@@ -27,7 +25,6 @@
         text-overflow: ellipsis;
         cursor: pointer;
       }
-      /* Simple pulse animation for the ping button and copy animation */
       @keyframes pulse {
         0%, 100% { transform: scale(1); }
         50% { transform: scale(1.1); }
@@ -87,7 +84,7 @@
           <input
             id="searchInput"
             type="text"
-            placeholder="Search models (support: quotes, site:)..."
+            placeholder="Search models..."
             class="px-4 py-2 bg-gray-700 rounded border border-gray-600 focus:outline-none"
           />
         </div>
