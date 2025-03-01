@@ -2,9 +2,8 @@
 <html lang="en" class="dark">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>meow Analyzer</title>
-    <!-- Tailwind via CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
       /* Custom file input styles */
@@ -47,12 +46,11 @@
     </header>
 
     <main class="max-w-4xl mx-auto">
-      <!-- File Upload and Controls -->
       <div class="bg-gray-800 p-8 rounded-lg shadow-md flex flex-col items-center space-y-4">
         <div class="file-input-container">
           <label class="px-8 py-4 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-lg cursor-pointer">
             Choose JSON File
-            <input id="jsonInput" type="file" accept=".json" />
+            <input id="jsonInput" type="file" accept=".json"/>
           </label>
         </div>
         <button id="processBtn" class="w-full max-w-xs px-8 py-4 bg-green-600 hover:bg-green-700 rounded-lg text-xl transition">
@@ -60,46 +58,46 @@
         </button>
       </div>
       
-      <!-- Sorting & Search Controls -->
       <div id="controls" class="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
         <div class="flex items-center space-x-2">
           <span class="font-semibold">Sort by:</span>
-          <!-- Sort buttons with inline SVG icons -->
           <button data-sort="rating" class="sort-btn flex items-center px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded">
             <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path d="M6 9l6-6 6 6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M6 15l6 6 6-6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M6 9l6-6 6 6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+              <path d="M6 15l6 6 6-6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
             </svg>
             Rating
           </button>
           <button data-sort="average" class="sort-btn flex items-center px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded">
             <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path d="M4 6h16" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M4 12h10" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M4 18h8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M4 6h16" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+              <path d="M4 12h10" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+              <path d="M4 18h8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
             </svg>
             Average Time
           </button>
           <button data-sort="mintime" class="sort-btn flex items-center px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded">
             <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path d="M5 13l4 4L19 7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M5 13l4 4L19 7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
             </svg>
             Min Time
           </button>
         </div>
         <div class="flex items-center">
-          <input id="searchInput" type="text" placeholder="Search models..." class="px-4 py-2 bg-gray-700 rounded border border-gray-600 focus:outline-none" />
+          <input
+            id="searchInput"
+            type="text"
+            placeholder="Search models (support: quotes, site:)..."
+            class="px-4 py-2 bg-gray-700 rounded border border-gray-600 focus:outline-none"
+          />
         </div>
       </div>
       
-      <!-- Results Section with site cards -->
       <div id="results" class="mt-8 space-y-4"></div>
     </main>
 
-    <!-- Modal for extended site details -->
     <div id="modalOverlay" class="fixed inset-0 bg-black bg-opacity-60 hidden items-center justify-center">
       <div id="modalContent" class="bg-gray-800 rounded-lg shadow-lg max-w-4xl w-full p-6 relative overflow-y-auto max-h-[90vh]">
-        <!-- Modal content is injected dynamically -->
       </div>
     </div>
 
@@ -107,7 +105,39 @@
       let computedGroups = [];
       let currentSort = { criterion: "rating", ascending: false };
 
-      // Utility functions for model priority (specific to openAI)
+      function isWholeWordMatch(token, text) {
+        let pos = text.indexOf(token);
+        while (pos !== -1) {
+          const before = pos === 0 || " \t\n.,;:()[]{}\"'".includes(text[pos - 1]);
+          const after = (pos + token.length === text.length) || " \t\n.,;:()[]{}\"'".includes(text[pos + token.length]);
+          if (before && after) {
+            return true;
+          }
+          pos = text.indexOf(token, pos + 1);
+        }
+        return false;
+      }
+
+      function normalizeUrl(inputUrl) {
+        try {
+          const parsed = new URL(inputUrl);
+          if ((parsed.protocol === "http:" && parsed.port === "80") || 
+              (parsed.protocol === "https:" && parsed.port === "443")) {
+            parsed.port = "";
+          }
+          parsed.protocol = "";
+          let ret = parsed.host + parsed.pathname;
+          if (ret.endsWith("/")) { ret = ret.slice(0, -1); }
+          return ret.toLowerCase();
+        } catch (e) {
+          let ret = inputUrl.toLowerCase();
+          ret = ret.replace(/^https?:\/\//, "").replace(/^www\./, "");
+          if (ret.endsWith("/")) { ret = ret.slice(0, -1); }
+          ret = ret.replace(/:80$/, "").replace(/:443$/, "");
+          return ret;
+        }
+      }
+
       function isPriority1(modelName) {
         return (
           modelName.includes("o1") ||
@@ -124,7 +154,6 @@
         );
       }
 
-      // Read and parse the JSON file.
       function readJSONFile(file) {
         return new Promise((resolve, reject) => {
           const reader = new FileReader();
@@ -132,16 +161,13 @@
             try {
               const json = JSON.parse(event.target.result);
               resolve(json);
-            } catch (e) {
-              reject(e);
-            }
+            } catch (e) { reject(e); }
           };
           reader.onerror = (error) => reject(error);
           reader.readAsText(file);
         });
       }
 
-      // Process JSON data — extract records from each entry.
       function processData(data) {
         const records = [];
         data.forEach(entry => {
@@ -153,11 +179,8 @@
                 const details = modelsObj[modelKey];
                 let place = "";
                 if (provider === "openAI") {
-                  if (isPriority1(modelKey)) {
-                    place = "first";
-                  } else if (isPriority2(modelKey)) {
-                    place = "second";
-                  }
+                  if (isPriority1(modelKey)) { place = "first"; }
+                  else if (isPriority2(modelKey)) { place = "second"; }
                 }
                 allModels.push({
                   provider,
@@ -169,7 +192,9 @@
                 });
               });
             });
-            const mainModels = allModels.filter(m => m.provider === "openAI" && (m.place === "first" || m.place === "second"));
+            const mainModels = allModels.filter(m => 
+              m.provider === "openAI" && (m.place === "first" || m.place === "second")
+            );
             records.push({
               url: entry.url,
               title: entry.title,
@@ -183,34 +208,33 @@
         return records;
       }
 
-      // Group records by site URL.
       function groupBySite(records) {
         const groups = {};
         records.forEach(record => {
-          if (!groups[record.url]) {
-            groups[record.url] = {
+          const normalized = normalizeUrl(record.url);
+          if (!groups[normalized]) {
+            groups[normalized] = {
               url: record.url,
               title: record.title,
               version: record.version,
               provider: record.provider,
-              mainModels: [],
-              allModels: []
+              mainModels: [...record.mainModels],
+              allModels: [...record.allModels]
             };
+          } else {
+            groups[normalized].mainModels = groups[normalized].mainModels.concat(record.mainModels);
+            groups[normalized].allModels = groups[normalized].allModels.concat(record.allModels);
           }
-          groups[record.url].mainModels = groups[record.url].mainModels.concat(record.mainModels);
-          groups[record.url].allModels = groups[record.url].allModels.concat(record.allModels);
         });
         return Object.values(groups);
       }
 
-      // Parse version string to a number.
       function parseVersion(versionStr) {
         if (versionStr === "Unknown") return 0;
         const num = parseFloat(versionStr);
         return isNaN(num) ? 0 : num;
       }
 
-      // Compute metrics for each site group.
       function computeMetrics(groups) {
         groups.forEach(group => {
           const modelsToUse = group.mainModels.length > 0 ? group.mainModels : group.allModels;
@@ -248,39 +272,69 @@
                               0.35 * group.normHybrid +
                               0.15 * group.normVersion +
                               0.05 * group.tier1 +
-                              0.3 * group.bothTiers;
+                              0.3  * group.bothTiers;
         });
         return groups;
       }
 
-      // Sorting function based on current sort criterion.
+      function parseSearchQuery(query) {
+        const reg = /"([^"]+)"|(\S+)/g;
+        const tokens = [];
+        let match;
+        while ((match = reg.exec(query)) !== null) {
+          if (match[1]) {
+            tokens.push({ type: "quoted", value: match[1].toLowerCase() });
+          } else if (match[2].startsWith("site:")) {
+            tokens.push({ type: "site", value: match[2].substring(5).toLowerCase() });
+          } else {
+            tokens.push({ type: "normal", value: match[2].toLowerCase() });
+          }
+        }
+        return tokens;
+      }
+
+      function filterGroups(groups, query) {
+        const tokens = parseSearchQuery(query);
+        if (!tokens.length) return groups;
+        return groups.filter(group => {
+          return tokens.every(token => {
+            switch (token.type) {
+              case "quoted":
+              case "normal": {
+                return (
+                  group.allModels.some(m => 
+                    isWholeWordMatch(token.value, m.model) || 
+                    (m.reply && isWholeWordMatch(token.value, m.reply))
+                  ) ||
+                  isWholeWordMatch(token.value, group.url) ||
+                  isWholeWordMatch(token.value, group.title)
+                );
+              }
+              case "site": {
+                const normalized = normalizeUrl(group.url).toLowerCase();
+                return normalized.includes(token.value);
+              }
+              default:
+                return true;
+            }
+          });
+        });
+      }
+
       function sortGroups(groups) {
         const { criterion, ascending } = currentSort;
         groups.sort((a, b) => {
           let cmp = 0;
-          if (criterion === "rating") {
-            cmp = a.mini_rating - b.mini_rating;
-          } else if (criterion === "average") {
-            cmp = a.averageHybrid - b.averageHybrid;
-          } else if (criterion === "mintime") {
-            cmp = a.minTime - b.minTime;
-          }
+          if (criterion === "rating") cmp = a.mini_rating - b.mini_rating;
+          else if (criterion === "average") cmp = a.averageHybrid - b.averageHybrid;
+          else if (criterion === "mintime") cmp = a.minTime - b.minTime;
           return ascending ? cmp : -cmp;
         });
       }
 
-      // Filter groups by search query (checks for matching model substring).
-      function filterGroups(groups, query) {
-        if (!query) return groups;
-        query = query.toLowerCase();
-        return groups.filter(group =>
-          group.allModels.some(m => m.model.toLowerCase().includes(query))
-        );
-      }
-
-      // Render site cards with a left counter and right badge showing matching model.
       function renderResults(groups) {
         const searchQuery = document.getElementById("searchInput").value.trim().toLowerCase();
+        const simpleQuery = searchQuery.replace(/"/g, "");
         const resultsDiv = document.getElementById("results");
         resultsDiv.innerHTML = "";
         if (groups.length === 0) {
@@ -289,12 +343,13 @@
         }
         groups.forEach((group, index) => {
           let matchBadge = "";
-          if (searchQuery) {
-            const matchingModel = group.allModels.find(m => m.model.toLowerCase().includes(searchQuery));
+          if (simpleQuery && isWholeWordMatch(simpleQuery, group.allModels.map(m => m.model).join(" "))) {
+            const matchingModel = group.allModels.find(m => isWholeWordMatch(simpleQuery, m.model));
             if (matchingModel) {
-              matchBadge = `<div class="ml-auto text-sm text-green-300 border border-green-300 px-2 py-1 rounded">
-                              Matched: <span class="font-semibold">${matchingModel.model}</span>
-                            </div>`;
+              matchBadge = `
+                <div class="ml-auto text-sm text-green-300 border border-green-300 px-2 py-1 rounded">
+                  Matched: <span class="font-semibold">${matchingModel.model}</span>
+                </div>`;
             }
           }
           const card = document.createElement("div");
@@ -313,7 +368,6 @@
         });
       }
 
-      // Utility: Create a truncated reply cell with toggle.
       function createReplyCell(reply, id) {
         const MAX_LENGTH = 30;
         const cell = document.createElement("td");
@@ -325,11 +379,7 @@
           span.classList.add("truncate-reply");
           span.title = reply;
           span.addEventListener("click", () => {
-            if (span.textContent.endsWith("…")) {
-              span.textContent = reply;
-            } else {
-              span.textContent = reply.substring(0, MAX_LENGTH) + "…";
-            }
+            span.textContent = span.textContent.endsWith("…") ? reply : reply.substring(0, MAX_LENGTH) + "…";
           });
         } else {
           span.textContent = reply;
@@ -338,31 +388,16 @@
         return cell;
       }
 
-      // Open modal with extended site details; models are grouped by provider.
       function openModal(group) {
         const modalOverlay = document.getElementById("modalOverlay");
         const modalContent = document.getElementById("modalContent");
         const groupsByProvider = {};
         group.allModels.forEach((m, idx) => {
-          if (!groupsByProvider[m.provider]) {
-            groupsByProvider[m.provider] = [];
-          }
+          if (!groupsByProvider[m.provider]) { groupsByProvider[m.provider] = []; }
           groupsByProvider[m.provider].push({ ...m, id: idx });
         });
         let providerSections = "";
         for (const provider in groupsByProvider) {
-          let rows = "";
-          groupsByProvider[provider].forEach(m => {
-            rows += `
-              <tr class="border-b border-gray-700">
-                <td class="px-2 py-1 text-sm">${m.model}</td>
-                <td class="px-2 py-1 text-sm">${m.place || "-"}</td>
-                <td class="px-2 py-1 text-sm" id="reply-cell-${m.id}"></td>
-                <td class="px-2 py-1 text-sm">${m.time.toFixed(3)}</td>
-                <td class="px-2 py-1 text-sm">${m.first_token.toFixed(3)}</td>
-              </tr>
-            `;
-          });
           providerSections += `
             <div class="mb-4">
               <h3 class="text-xl font-semibold mb-2">${provider}</h3>
@@ -378,15 +413,15 @@
                     </tr>
                   </thead>
                   <tbody>
-                    ${groupsByProvider[provider].map(m => {
-                      return `<tr class="border-b border-gray-700">
+                    ${groupsByProvider[provider].map(m => `
+                      <tr class="border-b border-gray-700">
                         <td class="px-2 py-1 text-sm">${m.model}</td>
                         <td class="px-2 py-1 text-sm">${m.place || "-"}</td>
                         <td class="px-2 py-1 text-sm" id="reply-cell-${m.id}"></td>
                         <td class="px-2 py-1 text-sm">${m.time.toFixed(3)}</td>
                         <td class="px-2 py-1 text-sm">${m.first_token.toFixed(3)}</td>
-                      </tr>`;
-                    }).join('')}
+                      </tr>
+                    `).join("")}
                   </tbody>
                 </table>
               </div>
@@ -394,7 +429,6 @@
           `;
         }
         modalContent.innerHTML = `
-          <!-- Modal header: Title, URL and details with control buttons on top right -->
           <div class="flex flex-col sm:flex-row sm:items-start justify-between">
             <div>
               <h2 class="text-3xl font-bold mb-1">${group.title}</h2>
@@ -402,7 +436,6 @@
               <p class="text-sm text-gray-400"><span class="font-semibold">Mini Rating:</span> ${group.mini_rating.toFixed(2)}</p>
               <p class="text-sm text-gray-400 mb-2"><span class="font-semibold">Avg Hybrid Metric:</span> ${group.averageHybrid.toFixed(2)}</p>
             </div>
-            <!-- Control buttons moved to top-right -->
             <div class="flex items-center space-x-2 mt-2 sm:mt-0">
               <button id="copyBtn" class="px-3 py-1 bg-yellow-600 hover:bg-yellow-700 rounded transition text-sm">Copy URL</button>
               <button id="pingBtn" class="px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded transition text-sm">Ping Site</button>
@@ -413,27 +446,22 @@
             ${providerSections}
           </div>
         `;
-        // Fill reply cells
         for (const provider in groupsByProvider) {
           groupsByProvider[provider].forEach(m => {
             const cell = createReplyCell(m.reply, m.id);
             const replyCell = document.getElementById("reply-cell-" + m.id);
-            if (replyCell) {
-              replyCell.replaceWith(cell);
-            }
+            if (replyCell) { replyCell.replaceWith(cell); }
           });
         }
         modalOverlay.classList.remove("hidden");
         modalOverlay.classList.add("flex");
         document.getElementById("closeModalBtn")?.remove();
-        // Add a close button at top left over modal content
         const closeBtn = document.createElement("button");
         closeBtn.id = "closeModalBtn";
         closeBtn.className = "absolute top-3 left-3 text-gray-400 hover:text-gray-200 text-2xl";
         closeBtn.textContent = "×";
         closeBtn.addEventListener("click", closeModal);
         modalContent.appendChild(closeBtn);
-        // Setup control buttons events:
         document.getElementById("pingBtn").addEventListener("click", () => pingSite(group.url));
         document.getElementById("visitBtn").addEventListener("click", () => window.open(group.url, "_blank"));
         document.getElementById("visitBtn").addEventListener("auxclick", (e) => {
@@ -453,13 +481,11 @@
             console.error("Failed to copy URL:", err);
           }
         });
-        // Clicking on modalOverlay (outside modalContent) closes modal.
         document.getElementById("modalOverlay").addEventListener("click", function(e) {
           if (e.target === this) closeModal();
         });
       }
 
-      // Ping function: update pingBtn appearance based on result.
       async function pingSite(url) {
         const pingBtn = document.getElementById("pingBtn");
         pingBtn.textContent = "Pinging...";
@@ -474,7 +500,9 @@
           pingBtn.classList.add("animate-pulse");
           setTimeout(() => { pingBtn.classList.remove("animate-pulse"); }, 1000);
         } catch (error) {
-          if (error && error.message && error.message.toLowerCase().includes("certificate")) {
+          if (error && error.message && 
+              (error.message.toLowerCase().includes("certificate") ||
+               error.message.toLowerCase().includes("cors"))) {
             pingBtn.textContent = "Yes";
             pingBtn.classList.remove("bg-blue-500", "bg-red-600");
             pingBtn.classList.add("bg-green-600");
@@ -492,7 +520,6 @@
         document.getElementById("modalOverlay").classList.add("hidden");
       }
 
-      // Sorting & Search event handlers.
       document.querySelectorAll(".sort-btn").forEach(btn => {
         btn.addEventListener("click", () => {
           const criterion = btn.getAttribute("data-sort");
@@ -505,9 +532,7 @@
           updateResults();
         });
       });
-      document.getElementById("searchInput").addEventListener("input", () => {
-        updateResults();
-      });
+      document.getElementById("searchInput").addEventListener("input", updateResults);
 
       function updateResults() {
         let filtered = filterGroups(computedGroups, document.getElementById("searchInput").value);
@@ -515,7 +540,6 @@
         renderResults(filtered);
       }
 
-      // Process JSON when "Process JSON" is clicked.
       document.getElementById("processBtn").addEventListener("click", async () => {
         const fileInput = document.getElementById("jsonInput");
         if (!fileInput.files || fileInput.files.length === 0) {
